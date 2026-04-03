@@ -1,0 +1,104 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users can only read/write their own user document
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Chats (direct messages)
+    match /chats/{chatId} {
+      // Users can read a chat if they are a participant
+      allow read: if request.auth != null &&
+                     request.auth.uid in resource.data.participants;
+
+      // Users can write to a chat if they are a participant
+      allow write: if request.auth != null &&
+                      request.auth.uid in resource.data.participants;
+
+      // Messages within chats
+      match /messages/{messageId} {
+        // Participants can read messages
+        allow read: if request.auth != null &&
+                       request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+
+        // Users can create messages if they are a participant and are the sender
+        allow create: if request.auth != null &&
+                         request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants &&
+                         request.resource.data.senderId == request.auth.uid;
+
+        // Users can update their own messages or if they are a participant
+        allow update: if request.auth != null &&
+                         request.auth.uid == resource.data.senderId;
+
+        // Users can delete their own messages
+        allow delete: if request.auth != null &&
+                         request.auth.uid == resource.data.senderId;
+      }
+
+      // Typing indicators
+      match /typing/{userId} {
+        allow read: if request.auth != null &&
+                       request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+
+        allow write: if request.auth != null &&
+                        request.auth.uid == userId;
+      }
+    }
+
+    // Groups (group chats)
+    match /groups/{groupId} {
+      // Members can read group info
+      allow read: if request.auth != null &&
+                     request.auth.uid in resource.data.members;
+
+      // Group creator can write/update
+      allow write: if request.auth != null &&
+                      request.auth.uid in resource.data.adminIds;
+
+      // Members can update basic info (for typing status, etc.)
+      allow update: if request.auth != null &&
+                       request.auth.uid in resource.data.members;
+
+      // Messages within groups
+      match /messages/{messageId} {
+        // Group members can read messages
+        allow read: if request.auth != null &&
+                       request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members;
+
+        // Members can create messages
+        allow create: if request.auth != null &&
+                         request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members &&
+                         request.resource.data.senderId == request.auth.uid;
+
+        // Users can update their own messages
+        allow update: if request.auth != null &&
+                         request.auth.uid == resource.data.senderId;
+
+        // Users can delete their own messages or admins can delete any
+        allow delete: if request.auth != null &&
+                         (request.auth.uid == resource.data.senderId ||
+                          request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.adminIds);
+      }
+
+      // Typing indicators for groups
+      match /typing/{userId} {
+        allow read: if request.auth != null &&
+                       request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members;
+
+        allow write: if request.auth != null &&
+                        request.auth.uid == userId;
+      }
+    }
+
+    // Default deny - more permissive for development only
+    // Change this in production to explicitly deny
+    match /{document=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+  }
+}
+
