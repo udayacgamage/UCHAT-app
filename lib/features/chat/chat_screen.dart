@@ -170,9 +170,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         children: [
           Expanded(
             child: messages.when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(),
-              ),
+              loading: () {
+                // Don't show loading - just return empty container (silent refresh)
+                return Container();
+              },
               error: (err, st) => Center(
                 child: Text('Error loading messages: $err'),
               ),
@@ -184,7 +185,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 }
 
                 return currentUser.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () => Container(), // Silent loading
                   error: (err, st) => Center(child: Text('Error: $err')),
                   data: (user) {
                     return ListView.builder(
