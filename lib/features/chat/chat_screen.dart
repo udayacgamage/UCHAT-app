@@ -183,27 +183,30 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   );
                 }
 
-                return ListView.builder(
-                  reverse: true,
-                  controller: _scrollController,
-                  itemCount: messageList.length,
-                  itemBuilder: (context, index) {
-                    final message = messageList[index];
-                    final isSent = currentUser.whenData((user) {
-                      return user?.uid == message.senderId;
-                    }).value ??
-                        false;
+                return currentUser.when(
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (err, st) => Center(child: Text('Error: $err')),
+                  data: (user) {
+                    return ListView.builder(
+                      reverse: true,
+                      controller: _scrollController,
+                      itemCount: messageList.length,
+                      itemBuilder: (context, index) {
+                        final message = messageList[index];
+                        final isSent = user?.uid == message.senderId;
 
-                    return MessageBubble(
-                      senderName: message.senderName,
-                      content: message.isDeleted
-                          ? 'This message was deleted'
-                          : message.content,
-                      mediaUrl: message.isDeleted ? null : message.mediaUrl,
-                      timestamp: message.createdAt,
-                      isSent: isSent,
-                      isRead: message.readBy.isNotEmpty,
-                      isDelivered: message.deliveredTo.isNotEmpty,
+                        return MessageBubble(
+                          senderName: message.senderName,
+                          content: message.isDeleted
+                              ? 'This message was deleted'
+                              : message.content,
+                          mediaUrl: message.isDeleted ? null : message.mediaUrl,
+                          timestamp: message.createdAt,
+                          isSent: isSent,
+                          isRead: message.readBy.isNotEmpty,
+                          isDelivered: message.deliveredTo.isNotEmpty,
+                        );
+                      },
                     );
                   },
                 );

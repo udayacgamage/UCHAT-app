@@ -160,27 +160,31 @@ class UserService {
 
       AppLogger.debug('Searching users for: $query');
 
-      // Firebase doesn't support case-insensitive search, so we search by prefix
       final queryLower = query.toLowerCase();
       
-      // Query by name
-      final nameResults = await _firestore
+      // Get all users and filter locally (Firebase has limited query capabilities)
+      final allUsers = await _firestore
           .collection('users')
-          .where('name', isGreaterThanOrEqualTo: queryLower)
-          .where('name', isLessThan: queryLower + 'z')
-          .limit(20)
+          .limit(100)
           .get();
 
-      final users = <UserModel>{};
-      for (final doc in nameResults.docs) {
-        users.add(UserModel.fromMap(doc.data() as Map<String, dynamic>));
+      final users = <UserModel>[];
+      for (final doc in allUsers.docs) {
+        final user = UserModel.fromMap(doc.data() as Map<String, dynamic>);
+        final nameLower = user.name.toLowerCase();
+        final emailLower = user.email.toLowerCase();
+        
+        // Search by name or email (case-insensitive)
+        if (nameLower.contains(queryLower) || emailLower.contains(queryLower)) {
+          users.add(user);
+        }
       }
 
-      return users.toList();
+      return users;
     } catch (e, st) {
-      AppLogger.error('Failed to search users: $e', st);
+      AppLogger.error('Search failed: $e', st);
       throw AppException(
-        message: 'Failed to search users',
+        message: 'Search failed',
         originalException: e,
       );
     }
