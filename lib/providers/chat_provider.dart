@@ -126,3 +126,21 @@ final updateTypingProvider = FutureProvider.family<void, UpdateTypingParams>((re
     error: (err, st) => throw err,
   );
 });
+
+// Clear chat messages params
+class ClearChatParams {
+  final String chatId;
+  final bool isGroup;
+
+  ClearChatParams({
+    required this.chatId,
+    required this.isGroup,
+  });
+}
+
+// Clear chat messages provider
+final clearChatMessagesProvider = FutureProvider.family<void, ClearChatParams>((ref, params) async {
+  final chatService = ref.watch(chatServiceProvider);
+  await chatService.clearChatMessages(params.chatId, isGroup: params.isGroup);
+});
+

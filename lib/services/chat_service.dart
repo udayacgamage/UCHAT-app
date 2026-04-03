@@ -396,6 +396,33 @@ class ChatService {
     }
   }
 
+  /// Clear all messages in a chat
+  Future<void> clearChatMessages(String chatId, {bool isGroup = false}) async {
+    try {
+      AppLogger.debug('Clearing messages in ${isGroup ? 'group' : 'chat'}: $chatId');
+      
+      // Get all messages in the chat
+      final messagesSnapshot = await _firestore
+          .collection(FirestorePaths.messagesCollection(chatId))
+          .get();
+
+      // Delete all messages
+      final batch = _firestore.batch();
+      for (final doc in messagesSnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      
+      await batch.commit();
+      AppLogger.success('Chat messages cleared');
+    } catch (e, st) {
+      AppLogger.error('Failed to clear chat messages: $e', st);
+      throw AppException(
+        message: 'Failed to clear chat messages',
+        originalException: e,
+      );
+    }
+  }
+
   /// Delete a direct chat
   Future<void> deleteChat(String chatId) async {
     try {
