@@ -395,4 +395,54 @@ class ChatService {
       );
     }
   }
+
+  /// Delete a direct chat
+  Future<void> deleteChat(String chatId) async {
+    try {
+      AppLogger.debug('Deleting chat: $chatId');
+      await _firestore.collection('chats').doc(chatId).delete();
+      AppLogger.success('Chat deleted');
+    } catch (e, st) {
+      AppLogger.error('Failed to delete chat: $e', st);
+      throw AppException(
+        message: 'Failed to delete chat',
+        originalException: e,
+      );
+    }
+  }
+
+  /// Delete a group chat
+  Future<void> deleteGroup(String groupId) async {
+    try {
+      AppLogger.debug('Deleting group: $groupId');
+      await _firestore.collection('groups').doc(groupId).delete();
+      AppLogger.success('Group deleted');
+    } catch (e, st) {
+      AppLogger.error('Failed to delete group: $e', st);
+      throw AppException(
+        message: 'Failed to delete group',
+        originalException: e,
+      );
+    }
+  }
+
+  /// Leave a group (remove current user from members)
+  Future<void> leaveGroup(String groupId, String userId) async {
+    try {
+      AppLogger.debug('User $userId leaving group: $groupId');
+      await _firestore
+          .collection('groups')
+          .doc(groupId)
+          .update({
+        'members': FieldValue.arrayRemove([userId]),
+      });
+      AppLogger.success('Left group');
+    } catch (e, st) {
+      AppLogger.error('Failed to leave group: $e', st);
+      throw AppException(
+        message: 'Failed to leave group',
+        originalException: e,
+      );
+    }
+  }
 }

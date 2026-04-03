@@ -200,54 +200,66 @@ class _ChatList extends ConsumerWidget {
               final unreadCount = currentUserId != null 
                   ? (chat.unreadCount[currentUserId] ?? 0)
                   : 0;
-
-              return ListTile(
-                leading: Stack(
-                  children: [
-                    AvatarWidget(
-                      imageUrl: photoUrl,
-                      initials: title.isNotEmpty ? title[0] : '?',
-                      size: 40,
-                    ),
-                    if (unreadCount > 0)
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: const BoxDecoration(
-                            color: AppColors.error,
-                            shape: BoxShape.circle,
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: 20,
-                            minHeight: 20,
-                          ),
-                          child: Center(
-                            child: Text(
-                              unreadCount > 99 ? '99+' : '$unreadCount',
-                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
+              
+              return Dismissible(
+                key: Key(chat.id),
+                direction: DismissDirection.endToStart,
+                onDismissed: (direction) {
+                  _deleteChat(chat.id, context, ref);
+                },
+                background: Container(
+                  color: Colors.red,
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 16),
+                  child: const Icon(Icons.delete, color: Colors.white),
+                ),
+                child: ListTile(
+                  leading: Stack(
+                    children: [
+                      AvatarWidget(
+                        imageUrl: photoUrl,
+                        initials: title.isNotEmpty ? title[0] : '?',
+                        size: 40,
+                      ),
+                      if (unreadCount > 0)
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: const BoxDecoration(
+                              color: AppColors.error,
+                              shape: BoxShape.circle,
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 20,
+                              minHeight: 20,
+                            ),
+                            child: Center(
+                              child: Text(
+                                unreadCount > 99 ? '99+' : '$unreadCount',
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                  ],
-                ),
-                title: Text(title),
-                subtitle: Text(
-                  chat.lastMessage.isEmpty ? 'No messages' : chat.lastMessage,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                trailing: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      _formatTime(chat.lastMessageTime),
+                    ],
+                  ),
+                  title: Text(title),
+                  subtitle: Text(
+                    chat.lastMessage.isEmpty ? 'No messages' : chat.lastMessage,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  trailing: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        _formatTime(chat.lastMessageTime),
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     if (unreadCount > 0)
@@ -265,11 +277,29 @@ class _ChatList extends ConsumerWidget {
                 onTap: () {
                   context.push('/chat/${chat.id}?isGroup=false');
                 },
+                ),
               );
             },
           );
         },
       );
+  }
+
+  Future<void> _deleteChat(String chatId, BuildContext context, WidgetRef ref) async {
+    try {
+      final chatService = ref.read(chatServiceProvider);
+      await chatService.deleteChat(chatId);
+      
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Chat deleted')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete chat: $e')),
+      );
+    }
   }
 
   String _formatTime(DateTime time) {
@@ -298,52 +328,82 @@ class _GroupList extends ConsumerWidget {
               final group = groupList[index];
               final memberCount = group.members.length;
               
-              return ListTile(
-                leading: Stack(
-                  children: [
-                    AvatarWidget(
-                      imageUrl: group.photoUrl,
-                      initials: group.name.isNotEmpty ? group.name[0] : 'G',
-                      size: 40,
-                    ),
-                    Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: const BoxDecoration(
-                          color: AppColors.primary,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.group,
-                          size: 12,
-                          color: Colors.white,
+              return Dismissible(
+                key: Key(group.id),
+                direction: DismissDirection.endToStart,
+                onDismissed: (direction) {
+                  _deleteGroup(group.id, context, ref);
+                },
+                background: Container(
+                  color: Colors.red,
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 16),
+                  child: const Icon(Icons.delete, color: Colors.white),
+                ),
+                child: ListTile(
+                  leading: Stack(
+                    children: [
+                      AvatarWidget(
+                        imageUrl: group.photoUrl,
+                        initials: group.name.isNotEmpty ? group.name[0] : 'G',
+                        size: 40,
+                      ),
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.group,
+                            size: 12,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                  title: Text(group.name),
+                  subtitle: Text(
+                    group.lastMessage.isEmpty 
+                        ? '$memberCount members'
+                        : '${group.lastMessage} • $memberCount members',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  trailing: Text(
+                    _formatTime(group.lastMessageTime),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  onTap: () {
+                    context.push('/chat/${group.id}?isGroup=true');
+                  },
                 ),
-                title: Text(group.name),
-                subtitle: Text(
-                  group.lastMessage.isEmpty 
-                      ? '$memberCount members'
-                      : '${group.lastMessage} • $memberCount members',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                trailing: Text(
-                  _formatTime(group.lastMessageTime),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                onTap: () {
-                  context.push('/chat/${group.id}?isGroup=true');
-                },
               );
             },
           );
-      },
-    );
+        },
+      );
+  }
+
+  Future<void> _deleteGroup(String groupId, BuildContext context, WidgetRef ref) async {
+    try {
+      final chatService = ref.read(chatServiceProvider);
+      await chatService.deleteGroup(groupId);
+      
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Group deleted')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete group: $e')),
+      );
+    }
   }
 
   String _formatTime(DateTime time) {
